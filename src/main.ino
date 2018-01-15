@@ -1,4 +1,4 @@
-#include "arduino.h"
+//#include "arduino.h"
 
 // Needed for SPIFFS
 #include <FS.h>
@@ -12,6 +12,7 @@
 
 // PIN used to reset configuration.  Enables internal Pull Up.  Ground to reset.
 #define PIN_RESET 13 // Labeled D7 on ESP12E DEVKIT V2
+#define PIN_SWITCH 5 // Labeled D1 on ESP12E DEVKIT V2
 #define RESET_DURATION 30
 
 // MQTT
@@ -24,8 +25,9 @@ char mqtt_pass[20];
 
 // Name for this ESP
 char node_name[20];
-char topic_status[50];
+char topic_connection[50];
 char topic_control[50];
+char topic_status[50];
 
 /* ========================================================================================================
                                            __
@@ -78,6 +80,9 @@ void setup() {
   // short pause on startup to look for settings RESET
   Serial.println("Waiting for reset");
   pinMode(PIN_RESET, INPUT_PULLUP);
+  pinMode(PIN_SWITCH, OUTPUT);
+  digitalWrite(PIN_SWITCH, 0);
+
   bool reset = false;
   int resetTimeRemaining = RESET_DURATION;
   while (!reset && resetTimeRemaining-- > 0) {
@@ -139,6 +144,10 @@ void setup() {
   Serial.print("Node Name: ");
   Serial.println(node_name);
 
+  strcat(topic_connection, "esp/");
+  strcat(topic_connection, node_name);
+  strcat(topic_connection, "/connection");
+
   strcat(topic_status, "esp/");
   strcat(topic_status, node_name);
   strcat(topic_status, "/status");
@@ -158,7 +167,7 @@ void setup() {
 
   mqttClient.setKeepAlive(5);
 
-  mqttClient.setWill(topic_status, 2, true, "offline");
+  mqttClient.setWill(topic_connection, 2, true, "offline");
 
   Serial.print("MQTT: ");
   Serial.print(mqtt_user);
@@ -189,7 +198,7 @@ void setup() {
 
 uint16_t controlSubscribePacketId;
 
-void onMqttConnect() {
+void onMqttConnect(bool sessionPresent) {
   Serial.println("** Connected to the broker **");
   // subscribe to the control topic
   controlSubscribePacketId = mqttClient.subscribe(topic_control, 2);
@@ -199,7 +208,8 @@ void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
   Serial.println("** Subscribe acknowledged **");
   // once successfully subscribed to control, public online status
   if (packetId == controlSubscribePacketId) {
-    mqttClient.publish(topic_status, 2, true, "online");
+    mqttClient.publish(topic_connection, 2, true, "online");
+    mqttClient.publish(topic_status, 2, true, "OFF");
   }
 }
 
@@ -219,6 +229,17 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   Serial.println(topic);
   Serial.print("  payload: ");
   Serial.println(payload);
+  Serial.print("  size: ");
+  Serial.println(len);
+
+  if (strcmp(payload, "ON") == 0) {
+    digitalWrite(PIN_SWITCH, 1);
+    mqttClient.publish(topic_status, 2, true, "ON");
+  }
+  if (strcmp(payload, "OFF") == 0) {
+    digitalWrite(PIN_SWITCH, 0);
+    mqttClient.publish(topic_status, 2, true, "OFF");
+  }
 }
 
 void onMqttPublish(uint16_t packetId) {

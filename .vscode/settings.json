@@ -1,0 +1,5 @@
+{
+    "terminal.integrated.env.linux": {
+        "PATH": "/home/user/.platformio/penv/bin:/home/user/.nvm/versions/node/v7.7.4/bin:/home/user/bin:/home/user/apps/google-cloud-sdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/user/.dotfiles/bin:/home/user/gocode/bin:/home/user/bin:/home/user/apps/pycharm-2017.1.3/bin:/home/user/apps/go/bin:/home/user/apps/dotnet:/home/user/.platformio/penv/bin"
+    }
+}
